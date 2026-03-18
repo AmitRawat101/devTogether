@@ -1,0 +1,233 @@
+/* ====== THEME ====== */
+:root {
+--glass-bg: rgba(255, 255, 255, .08);
+--glass-border: rgba(255, 255, 255, .18);
+--neon-green: #0ff96a;
+--neon-blue: #00f7ff;
+--neon-pink: #ff6ec4;
+--text: #f1f1f1;
+--shadow: 0 10px 20px rgba(0, 0, 0, .35);
+--radius: 14px;
+--brandGrad: linear-gradient(-45deg, #6a11cb, #2575fc, #ff6ec4, #00f7ff);
+}
+
+/* ===== BACKGROUND ===== */
+body {
+margin: 0;
+color: var(--text);
+font-family: Poppins, system-ui, sans-serif;
+background: linear-gradient(-45deg, #6a11cb, #2575fc, #ff6ec4, #00f7ff);
+background-size: 400% 400%;
+animation: animatedGradient 12s ease infinite;
+}
+
+@keyframes animatedGradient {
+0% { background-position: 0 50% }
+50% { background-position: 100% 50% }
+100% { background-position: 0 50% }
+}
+
+/* ================= JOIN SCREEN ================= */
+
+.join-container {
+height: 100vh;
+display: flex;
+justify-content: center;
+align-items: center;
+flex-direction: column;
+gap: 16px;
+}
+
+.join-container h2 {
+font-size: 28px;
+font-weight: 700;
+}
+
+.join-container input {
+width: 260px;
+padding: 12px;
+border-radius: 10px;
+border: 1px solid var(--glass-border);
+background: var(--glass-bg);
+color: white;
+backdrop-filter: blur(12px);
+outline: none;
+}
+
+.join-container input:focus {
+box-shadow: 0 0 0 2px var(--neon-blue);
+}
+
+.join-container button {
+width: 260px;
+padding: 12px;
+border: none;
+border-radius: 10px;
+cursor: pointer;
+color: white;
+background: var(--brandGrad);
+background-size: 400% 400%;
+animation: animatedGradient 8s linear infinite;
+transition: .2s;
+}
+
+.join-container button:hover {
+transform: translateY(-2px);
+box-shadow: 0 0 16px var(--neon-blue), 0 0 20px var(--neon-green);
+}
+
+/* ================= EDITOR SCREEN ================= */
+
+.editor-container {
+padding: 30px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+
+/* Room title */
+.editor-container h3 {
+margin: 0;
+}
+
+/* ===== Typing indicator (FIXED POSITION, NO LAYOUT BREAK) ===== */
+
+.editor-container p {
+position: absolute;
+top: 70px;
+right: 40px;
+margin: 0;
+color: var(--neon-green);
+font-family: monospace;
+font-size: 14px;
+text-shadow:
+0 0 6px var(--neon-green),
+0 0 12px var(--neon-green);
+}
+
+/* ===== GRID LAYOUT ===== */
+
+.editor-grid {
+display: grid;
+grid-template-columns: 2fr 1fr;
+gap: 25px;
+}
+
+/* ===== LEFT PANEL ===== */
+
+.editor-left {
+display: flex;
+flex-direction: column;
+gap: 20px;
+}
+
+/* ===== LANGUAGE DROPDOWN ===== */
+
+select {
+width: 200px;
+padding: 10px;
+border-radius: 10px;
+border: 1px solid var(--glass-border);
+background: rgba(0,0,0,.6);
+color: white;
+backdrop-filter: blur(10px);
+outline: none;
+}
+
+/* dropdown options */
+select option {
+background: #111;
+color: white;
+}
+
+/* ===== BUTTONS ===== */
+
+button {
+padding: 10px 16px;
+border: none;
+border-radius: 10px;
+cursor: pointer;
+color: white;
+background: var(--brandGrad);
+background-size: 400% 400%;
+animation: animatedGradient 8s linear infinite;
+transition: .2s;
+}
+
+button:hover {
+transform: translateY(-2px);
+box-shadow: 0 0 14px var(--neon-green);
+}
+
+/* ===== MONACO EDITOR FIX ===== */
+
+.monaco-editor {
+border-radius: 12px;
+overflow: hidden;
+}
+
+/* ===== OUTPUT BOX (SAME WIDTH AS EDITOR) ===== */
+
+textarea {
+width: 100%;
+height: 140px;
+padding: 14px;
+border-radius: 12px;
+border: 1px solid var(--glass-border);
+background: #000;
+color: var(--neon-green);
+font-family: monospace;
+resize: none;
+box-sizing: border-box;
+box-shadow: inset 0 0 10px rgba(0,255,0,.4);
+}
+
+/* ===== USERS LIST ===== */
+
+ul {
+list-style: none;
+padding: 0;
+display: flex;
+gap: 10px;
+flex-wrap: wrap;
+}
+
+ul li {
+padding: 8px 14px;
+border-radius: 20px;
+background: var(--glass-bg);
+border: 1px solid var(--glass-border);
+backdrop-filter: blur(10px);
+}
+
+/* ===== CHAT BOX ===== */
+
+.chat-box {
+height: 160px;
+overflow-y: auto;
+padding: 12px;
+border-radius: 12px;
+border: 1px solid var(--glass-border);
+background: rgba(0,0,0,.3);
+backdrop-filter: blur(10px);
+}
+
+/* Chat messages */
+.chat-box div {
+margin-bottom: 8px;
+}
+
+/* ===== CHAT INPUT ===== */
+
+input {
+padding: 10px;
+border-radius: 10px;
+border: 1px solid var(--glass-border);
+background: var(--glass-bg);
+color: white;
+outline: none;
+}
+
+input::placeholder {
+color: rgba(255,255,255,.6);
+}

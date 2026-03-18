@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: dev2gether
+
+onecompiler:
+  api:
+    key: oc_44f3fa28s_44f3fa298_e2a8d7860cea92fde53465a0991dd1c60dcde419239d6957
