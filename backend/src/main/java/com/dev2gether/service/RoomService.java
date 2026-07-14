@@ -12,6 +12,7 @@ public class RoomService {
         rooms.computeIfAbsent(roomId, k -> new HashSet<>()).add(user);
     }
 
+
     public synchronized void leaveRoom(String roomId, String user) {
         Set<String> set = rooms.get(roomId);
 

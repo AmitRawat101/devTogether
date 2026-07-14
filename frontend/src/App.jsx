@@ -1,90 +1,148 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import Editor from "@monaco-editor/react";
+
+import JoinRoom from "./components/JoinRoom";
+import RoomHeader from "./components/RoomHeader";
+import UsersList from "./components/UsersList";
+import ChatPanel from "./components/ChatPanel";
+
 import "./App.css";
 
+const WS_URL = "http://localhost:8080/ws";
+
 const App = () => {
+  // The STOMP client is an object with methods, not data the UI
+  // renders directly — so it lives in a ref, not state. Putting it
+  // in state would trigger extra re-renders for no visual benefit.
   const stompClientRef = useRef(null);
 
+  // ---- connection / room state ----
   const [connected, setConnected] = useState(false);
   const [joined, setJoined] = useState(false);
   const [roomId, setRoomId] = useState("");
   const [userName, setUserName] = useState("");
+
+  // ---- editor state ----
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState("// Start coding here...");
+  const [output, setOutput] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+
+  // ---- room / social state ----
   const [users, setUsers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
-  const [output, setOutput] = useState("");
-  const [typing, setTyping] = useState("");
+  const [typingUser, setTypingUser] = useState("");
 
-  // ================= CONNECT =================
+  // Open the socket once on mount. Everything after this is driven
+  // by messages coming back over the `/topic/${roomId}` subscription.
   useEffect(() => {
-    const socket = new SockJS("http://localhost:8080/ws");
-
+    const socket = new SockJS(WS_URL);
     const stompClient = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: 5000,
     });
 
-    stompClient.onConnect = () => {
-      console.log("Connected to WebSocket");
-      setConnected(true);
-    };
+    stompClient.onConnect = () => setConnected(true);
 
     stompClient.activate();
     stompClientRef.current = stompClient;
 
-    return () => {
-      if (stompClient) stompClient.deactivate();
-    };
+    return () => stompClient.deactivate();
   }, []);
 
-  // ================= JOIN ROOM =================
-  const joinRoom = () => {
-    if (!connected || !stompClientRef.current?.connected) return;
-    if (!roomId || !userName) return;
+  // Central place that turns an incoming server message into state
+  // updates. Kept as one function so the "shape" of server events is
+  // easy to point to and explain in one spot.
+  const handleIncomingMessage = (rawMessage) => {
+    const data = JSON.parse(rawMessage.body);
 
-    stompClientRef.current.publish({
+    if (data.userJoined) setUsers(data.userJoined);
+
+    if (data.chatMessage) {
+      setMessages((prev) => [...prev, data.chatMessage]);
+    }
+
+    if (data.codeUpdate) setCode(data.codeUpdate);
+
+    if (data.languageUpdate) setLanguage(data.languageUpdate);
+
+    if (data.userTyping) {
+      setTypingUser(`${data.userTyping} is typing...`);
+      setTimeout(() => setTypingUser(""), 2000);
+    }
+
+    if (data.codeResponse) {
+      const { stdout, stderr, exception, error } = data.codeResponse;
+      setOutput(stdout || stderr || exception || error || "No output");
+      setIsRunning(false);
+    }
+  };
+
+  const joinRoom = () => {
+    const client = stompClientRef.current;
+    if (!connected || !client?.connected || !roomId || !userName) return;
+
+    client.publish({
       destination: "/app/join",
       body: JSON.stringify({ roomId, userName }),
     });
 
-    stompClientRef.current.subscribe(`/topic/${roomId}`, (message) => {
-      const data = JSON.parse(message.body);
-
-      if (data.userJoined) setUsers(data.userJoined);
-
-      if (data.chatMessage) {
-        setMessages((prev) => [...prev, data.chatMessage]);
-      }
-
-      if (data.codeUpdate) setCode(data.codeUpdate);
-
-      if (data.userTyping) {
-        setTyping(data.userTyping + " is typing...");
-        setTimeout(() => setTyping(""), 2000);
-      }
-
-      if (data.languageUpdate) setLanguage(data.languageUpdate);
-
-      // ✅ Handle OneCompiler Response
-      if (data.codeResponse) {
-        const res = data.codeResponse;
-
-        if (res.stdout) setOutput(res.stdout);
-        else if (res.stderr) setOutput(res.stderr);
-        else if (res.exception) setOutput(res.exception);
-        else if (res.error) setOutput(res.error);
-        else setOutput("No Output");
-      }
-    });
-
+    client.subscribe(`/topic/${roomId}`, handleIncomingMessage);
     setJoined(true);
   };
 
-  // ================= CHAT =================
+  const leaveRoom = () => {
+    stompClientRef.current.publish({
+      destination: "/app/leaveRoom",
+      body: JSON.stringify({ roomId, userName }),
+    });
+
+    setJoined(false);
+    setRoomId("");
+    setUserName("");
+    setMessages([]);
+    setUsers([]);
+    setOutput("");
+  };
+
+  const handleCodeChange = (newCode) => {
+    setCode(newCode);
+
+    stompClientRef.current.publish({
+      destination: "/app/codeChange",
+      body: JSON.stringify({ roomId, code: newCode }),
+    });
+
+    stompClientRef.current.publish({
+      destination: "/app/typing",
+      body: JSON.stringify({ roomId, userName }),
+    });
+  };
+
+  const handleLanguageChange = (e) => {
+    const newLang = e.target.value;
+    setLanguage(newLang);
+
+    stompClientRef.current.publish({
+      destination: "/app/languageChange",
+      body: JSON.stringify({ roomId, language: newLang }),
+    });
+  };
+
+  const runCode = () => {
+    if (!stompClientRef.current?.connected) return;
+    setIsRunning(true);
+    setOutput("Running...");
+
+    stompClientRef.current.publish({
+      destination: "/app/compileCode",
+      body: JSON.stringify({ roomId, code, language }),
+    });
+  };
+
   const sendMessage = () => {
     if (!chatInput.trim()) return;
 
@@ -101,167 +159,68 @@ const App = () => {
     setChatInput("");
   };
 
-  // ================= CODE CHANGE =================
-  const handleCodeChange = (newCode) => {
-    setCode(newCode);
+  // ---- render ----
 
-    stompClientRef.current.publish({
-      destination: "/app/codeChange",
-      body: JSON.stringify({ roomId, code: newCode }),
-    });
-
-    stompClientRef.current.publish({
-      destination: "/app/typing",
-      body: JSON.stringify({ roomId, userName }),
-    });
-  };
-
-  // ================= LANGUAGE CHANGE =================
-  const handleLanguageChange = (e) => {
-    const newLang = e.target.value;
-    setLanguage(newLang);
-
-    stompClientRef.current.publish({
-      destination: "/app/languageChange",
-      body: JSON.stringify({ roomId, language: newLang }),
-    });
-  };
-
-  // ================= RUN CODE =================
-  const runCode = () => {
-    if (!stompClientRef.current?.connected) return;
-
-    setOutput("Running...");
-
-    stompClientRef.current.publish({
-      destination: "/app/compileCode",
-      body: JSON.stringify({
-        roomId,
-        code,
-        language,
-      }),
-    });
-  };
-
-  // ================= LEAVE =================
-  const leaveRoom = () => {
-    stompClientRef.current.publish({
-      destination: "/app/leaveRoom",
-      body: JSON.stringify({ roomId, userName }),
-    });
-
-    setJoined(false);
-    setRoomId("");
-    setUserName("");
-    setMessages([]);
-    setUsers([]);
-    setOutput("");
-  };
-
-  // ================= UI =================
-  if (!connected)
+  if (!connected) {
     return (
-      <div className="join-container">
-        <h2>Connecting...</h2>
+      <div className="join-screen">
+        <p className="connecting-text">Connecting to server…</p>
       </div>
     );
+  }
 
-  if (!joined)
+  if (!joined) {
     return (
-      <div className="join-container">
-        <h2>Join Code Room</h2>
-
-        <input
-          placeholder="Room ID"
-          value={roomId}
-          onChange={(e) => setRoomId(e.target.value)}
-        />
-
-        <input
-          placeholder="Your Name"
-          value={userName}
-          onChange={(e) => setUserName(e.target.value)}
-        />
-
-        <button onClick={joinRoom}>Join Room</button>
-      </div>
+      <JoinRoom
+        roomId={roomId}
+        userName={userName}
+        onRoomIdChange={setRoomId}
+        onUserNameChange={setUserName}
+        onJoin={joinRoom}
+      />
     );
+  }
 
   return (
-    <div className="editor-container">
-      <h3>Room: {roomId}</h3>
-      {typing && <p>{typing}</p>}
+    <div className="workspace">
+      <RoomHeader
+        roomId={roomId}
+        onlineCount={users.length}
+        language={language}
+        onLanguageChange={handleLanguageChange}
+        onRun={runCode}
+        onLeave={leaveRoom}
+        isRunning={isRunning}
+      />
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "2fr 1fr",
-          gap: "25px",
-        }}
-      >
-        {/* LEFT SIDE */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div style={{ display: "flex", gap: "15px" }}>
-            <select value={language} onChange={handleLanguageChange}>
-              <option value="javascript">JavaScript</option>
-              <option value="python">Python</option>
-              <option value="java">Java</option>
-              <option value="cpp">C++</option>
-            </select>
+      {typingUser && <p className="typing-indicator">{typingUser}</p>}
 
-            <button onClick={runCode}>Run Code</button>
-            <button onClick={leaveRoom}>Leave Room</button>
+      <div className="workspace-grid">
+        <div className="editor-column">
+          <div className="editor-frame">
+            <Editor
+              height="450px"
+              theme="vs-dark"
+              language={language}
+              value={code}
+              onChange={handleCodeChange}
+            />
           </div>
 
-          <Editor
-            height="450px"
-            theme="vs-dark"
-            language={language}
-            value={code}
-            onChange={handleCodeChange}
-          />
-
-          <textarea
-            value={output}
-            readOnly
-            placeholder="Output..."
-            style={{ height: "120px" }}
-          />
+          <div className="output-console">
+            <span className="output-prompt">$</span>
+            <pre>{output || "Output will appear here"}</pre>
+          </div>
         </div>
 
-        {/* RIGHT SIDE */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div>
-            <h3>Users</h3>
-            <ul>
-              {users.map((u, i) => (
-                <li key={i}>{u}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h3>Chat</h3>
-
-            <div className="chat-box">
-              {messages.map((m, i) => (
-                <div key={i}>
-                  <b>{m.sender}:</b> {m.text}
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-              <input
-                style={{ flex: 1 }}
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Type message"
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              />
-              <button onClick={sendMessage}>Send</button>
-            </div>
-          </div>
+        <div className="sidebar-column">
+          <UsersList users={users} />
+          <ChatPanel
+            messages={messages}
+            chatInput={chatInput}
+            onChatInputChange={setChatInput}
+            onSend={sendMessage}
+          />
         </div>
       </div>
     </div>
