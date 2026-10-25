@@ -1,3 +1,4 @@
+
 package com.dev2gether.config;
 
 import org.springframework.context.annotation.Configuration;
@@ -8,14 +9,17 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 @Configuration
 @EnableWebSocketMessageBroker
-public class WebSocketConfig  implements WebSocketMessageBrokerConfigurer {
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry
-                .addEndpoint("/ws")      // clients connect here
-                .setAllowedOriginPatterns("http://localhost:5175")  // adjust for prod
-                .withSockJS();           // fallback option
+                .addEndpoint("/ws")
+                .setAllowedOriginPatterns(
+                        "http://localhost:5175",
+                        "https://devtogether-blws.onrender.com"
+                )
+                .withSockJS();
     }
 
     @Override
