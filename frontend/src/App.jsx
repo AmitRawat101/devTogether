@@ -10,7 +10,11 @@ import ChatPanel from "./components/ChatPanel";
 
 import "./App.css";
 
-const WS_URL = import.meta.env.VITE_WS_URL || "http://localhost:8081/ws";
+const WS_URL = import.meta.env.VITE_WS_URL;
+
+if (!WS_URL) {
+  throw new Error("VITE_WS_URL is missing from the frontend environment");
+}
 
 const App = () => {
   // The STOMP client is an object with methods, not data the UI
