@@ -1,6 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
 
-/* ============ DESIGN TOKENS ============ */
 :root {
   --bg: #121317;
   --panel: #1a1b21;
@@ -135,7 +133,6 @@ button {
   cursor: not-allowed;
 }
 
-/* ============ WORKSPACE ============ */
 
 .workspace {
   min-height: 100vh;
@@ -237,9 +234,11 @@ select {
 }
 
 .typing-indicator {
+  height: 18px;
   margin: -6px 0 0;
   font-family: var(--font-mono);
   font-size: 12px;
+  line-height: 18px;
   color: var(--accent);
 }
 

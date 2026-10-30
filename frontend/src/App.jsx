@@ -197,7 +197,7 @@ const App = () => {
         isRunning={isRunning}
       />
 
-      {typingUser && <p className="typing-indicator">{typingUser}</p>}
+      <p className="typing-indicator">{typingUser}</p>
 
       <div className="workspace-grid">
         <div className="editor-column">
